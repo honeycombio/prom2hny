@@ -1,0 +1,72 @@
+{
+	"ImportPath": "github.com/honeycombio/prom2hny",
+	"GoVersion": "go1.8",
+	"GodepVersion": "v79",
+	"Packages": [
+		"./..."
+	],
+	"Deps": [
+		{
+			"ImportPath": "github.com/Sirupsen/logrus",
+			"Comment": "v1.0.0-2-g3d4380f",
+			"Rev": "3d4380f53a34dcdc95f0c1db702615992b38d9a4"
+		},
+		{
+			"ImportPath": "github.com/facebookgo/clock",
+			"Rev": "600d898af40aa09a7a93ecb9265d87b0504b6f03"
+		},
+		{
+			"ImportPath": "github.com/facebookgo/limitgroup",
+			"Rev": "6abd8d71ec01451d7f1929eacaa263bbe2935d05"
+		},
+		{
+			"ImportPath": "github.com/facebookgo/muster",
+			"Rev": "fd3d7953fd52354a74b9f6b3d70d0c9650c4ec2a"
+		},
+		{
+			"ImportPath": "github.com/golang/protobuf/proto",
+			"Rev": "8616e8ee5e20a1704615e6c8d7afcdac06087a67"
+		},
+		{
+			"ImportPath": "github.com/honeycombio/libhoney-go",
+			"Comment": "v1.3.2-3-g0c0e8c4",
+			"Rev": "0c0e8c402eeef843eafc2bad6dccb16baf565d2f"
+		},
+		{
+			"ImportPath": "github.com/jessevdk/go-flags",
+			"Comment": "v1.1-5-g4e64e4a",
+			"Rev": "4e64e4a4e2552194cf594243e23aa9baf3b4297e"
+		},
+		{
+			"ImportPath": "github.com/matttproud/golang_protobuf_extensions/pbutil",
+			"Comment": "v1.0.0-2-gc12348c",
+			"Rev": "c12348ce28de40eed0136aa2b644d0ee0650e56c"
+		},
+		{
+			"ImportPath": "github.com/prometheus/client_model/go",
+			"Comment": "model-0.0.2-14-g6f38060",
+			"Rev": "6f3806018612930941127f2a7c6c453ba2c527d2"
+		},
+		{
+			"ImportPath": "github.com/prometheus/common/expfmt",
+			"Rev": "3e6a7635bac6573d43f49f97b47eb9bda195dba8"
+		},
+		{
+			"ImportPath": "github.com/prometheus/common/internal/bitbucket.org/ww/goautoneg",
+			"Rev": "3e6a7635bac6573d43f49f97b47eb9bda195dba8"
+		},
+		{
+			"ImportPath": "github.com/prometheus/common/model",
+			"Rev": "3e6a7635bac6573d43f49f97b47eb9bda195dba8"
+		},
+		{
+			"ImportPath": "golang.org/x/sys/unix",
+			"Rev": "8f0908ab3b2457e2e15403d3697c9ef5cb4b57a9"
+		},
+		{
+			"ImportPath": "gopkg.in/alexcesaro/statsd.v2",
+			"Comment": "v2.0.0",
+			"Rev": "7fea3f0d2fab1ad973e641e51dba45443a311a90"
+		}
+	]
+}
