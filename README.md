@@ -6,6 +6,10 @@ primary use case is to send kube-state-metrics data to Honeycomb.
 ### Usage
 
 1. Run [kube-state-metrics](https://github.com/kubernetes/kube-state-metrics)
+    ```
+    git clone https://github.com/kubernetes/kube-state-metrics
+    kubectl apply -f kube-state-metrics/kubernetes
+    ```
 
 2. Deploy this utility:
     ```
