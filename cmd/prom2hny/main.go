@@ -29,7 +29,6 @@ type Options struct {
 type MetricGroup struct {
 	DataPoints  []*DataPoint
 	MetricGroup string
-	//	Labels      map[string]string
 }
 
 type DataPoint struct {
@@ -44,6 +43,10 @@ func NewMetricGroups(mfs []*dto.MetricFamily) []*MetricGroup {
 	metricGroupsMap := make(map[string]*MetricGroup)
 
 	for _, mf := range mfs {
+		if mf.GetType() != dto.MetricType_GAUGE {
+			continue
+		}
+
 		metricGroupName := getMetricGroupName(mf)
 		for _, m := range mf.Metric {
 			groupedKey := getGroupedKey(metricGroupName, m)
@@ -57,6 +60,7 @@ func NewMetricGroups(mfs []*dto.MetricFamily) []*MetricGroup {
 			dp := &DataPoint{
 				Name:   mf.GetName(),
 				Help:   mf.GetHelp(),
+				Value:  m.GetGauge().GetValue(),
 				Labels: makeLabels(m),
 			}
 
@@ -67,7 +71,7 @@ func NewMetricGroups(mfs []*dto.MetricFamily) []*MetricGroup {
 
 	}
 
-	metricGroups := make([]*MetricGroup, len(metricGroupsMap))
+	metricGroups := make([]*MetricGroup, 0, len(metricGroupsMap))
 	for k := range metricGroupsMap {
 		metricGroups = append(metricGroups, metricGroupsMap[k])
 	}
@@ -75,6 +79,7 @@ func NewMetricGroups(mfs []*dto.MetricFamily) []*MetricGroup {
 	return metricGroups
 }
 
+// Returns Metric Group based on metric name. kube-state-metrics metric names are formatted kube_<group-name>_*
 func getMetricGroupName(mf *dto.MetricFamily) string {
 	return strings.Split(mf.GetName(), "_")[1]
 }
@@ -95,41 +100,12 @@ func getGroupedKey(metricGroup string, m *dto.Metric) string {
 	return metricGroup + SEP + metricGroupKey
 }
 
-func NewDataPoints(mf *dto.MetricFamily) []*DataPoint {
-	var ret []*DataPoint
-
-	// Only process metrics of type GAUGE
-	if mf.GetType() != dto.MetricType_GAUGE {
-		return ret
-	}
-
-	for _, m := range mf.Metric {
-
-		dp := &DataPoint{
-			Name:   mf.GetName(),
-			Help:   mf.GetHelp(),
-			Labels: makeLabels(m),
-		}
-		ret = append(ret, dp)
-
-	}
-	return ret
-}
-
 func makeLabels(m *dto.Metric) map[string]string {
 	result := map[string]string{}
 	for _, lp := range m.Label {
 		result[lp.GetName()] = lp.GetValue()
 	}
 	return result
-}
-
-func (dp *DataPoint) ToEvent() *libhoney.Event {
-	ev := libhoney.NewEvent()
-	ev.Add(dp.Labels)
-	ev.AddField(dp.Name, dp.Value)
-	ev.AddField("help", dp.Help)
-	return ev
 }
 
 func (mg *MetricGroup) ToEvent() *libhoney.Event {
@@ -143,23 +119,17 @@ func (mg *MetricGroup) ToEvent() *libhoney.Event {
 }
 
 type Sender interface {
-	Send([]*DataPoint)
-	SendMetricGroup(*MetricGroup)
+	Send([]*MetricGroup)
 }
 
 // TODO: handle transmission errors
 type LibhoneySender struct{}
 
-func (ls *LibhoneySender) Send(dataPoints []*DataPoint) {
-	for _, dp := range dataPoints {
-		ev := dp.ToEvent()
+func (ls *LibhoneySender) Send(metricGroups []*MetricGroup) {
+	for _, mg := range metricGroups {
+		ev := mg.ToEvent()
 		ev.Send()
 	}
-}
-
-func (ls *LibhoneySender) SendMetricGroup(mg *MetricGroup) {
-	ev := mg.ToEvent()
-	ev.Send()
 }
 
 func (ls *LibhoneySender) ReadResponses() {
@@ -231,23 +201,7 @@ func run(options *Options, sender Sender) {
 		}
 
 		metricGroups := NewMetricGroups(metricFamilies)
-		for _, mg := range metricGroups {
-			if mg == nil {
-				continue
-			}
-			sender.SendMetricGroup(mg)
-		}
-
-		// for _, mf := range metricFamilies {
-		// 	dataPoints := NewDataPoints(mf)
-		// 	//logrus.WithField("datapoints", len(dataPoints)).Info("Sending data")
-		// 	// if len(dataPoints) > 0 {
-		// 	// 	b, _ := json.Marshal(dataPoints[0])
-		// 	// 	fmt.Println(string(b))
-		// 	// }
-		// 	sender.Send(dataPoints)
-		// }
-
+		sender.Send(metricGroups)
 	}
 }
 
