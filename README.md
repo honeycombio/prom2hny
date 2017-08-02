@@ -1,5 +1,7 @@
 [Under development]
 
+[![Build Status](https://travis-ci.org/honeycombio/prom2hny.svg?branch=master)](https://travis-ci.org/honeycombio/prom2hny)
+
 Scrapes Prometheus clients and sends their metrics to Honeycomb. The current
 primary use case is to send kube-state-metrics data to Honeycomb.
 
