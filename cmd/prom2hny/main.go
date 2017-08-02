@@ -26,6 +26,12 @@ type Options struct {
 	Interval int    `long:"interval" default:"60"`
 }
 
+type MetricGroup struct {
+	DataPoints  []*DataPoint
+	MetricGroup string
+	//	Labels      map[string]string
+}
+
 type DataPoint struct {
 	Name   string
 	Value  float64
@@ -33,17 +39,79 @@ type DataPoint struct {
 	Labels map[string]string
 }
 
-func NewDataPoints(mf *dto.MetricFamily) []*DataPoint {
-	var ret []*DataPoint
-	for _, m := range mf.Metric {
-		if mf.GetType() == dto.MetricType_GAUGE {
+func NewMetricGroups(mfs []*dto.MetricFamily) []*MetricGroup {
+
+	metricGroupsMap := make(map[string]*MetricGroup)
+
+	for _, mf := range mfs {
+		metricGroupName := getMetricGroupName(mf)
+		for _, m := range mf.Metric {
+			groupedKey := getGroupedKey(metricGroupName, m)
+			metricGroup, ok := metricGroupsMap[groupedKey]
+			if !ok {
+				metricGroup = &MetricGroup{
+					MetricGroup: metricGroupName,
+				}
+			}
+
 			dp := &DataPoint{
 				Name:   mf.GetName(),
 				Help:   mf.GetHelp(),
 				Labels: makeLabels(m),
 			}
-			ret = append(ret, dp)
+
+			metricGroup.DataPoints = append(metricGroup.DataPoints, dp)
+
+			metricGroupsMap[groupedKey] = metricGroup
 		}
+
+	}
+
+	metricGroups := make([]*MetricGroup, len(metricGroupsMap))
+	for k := range metricGroupsMap {
+		metricGroups = append(metricGroups, metricGroupsMap[k])
+	}
+
+	return metricGroups
+}
+
+func getMetricGroupName(mf *dto.MetricFamily) string {
+	return strings.Split(mf.GetName(), "_")[1]
+}
+
+// Create Key for Grouping Events based on https://github.com/kubernetes/kube-state-metrics/tree/master/Documentation
+func getGroupedKey(metricGroup string, m *dto.Metric) string {
+	labels := makeLabels(m)
+	const SEP = ":"
+	var metricGroupKey string
+
+	switch metricGroup {
+	case "node":
+		metricGroupKey = labels["node"]
+	default:
+		metricGroupKey = labels["namespace"] + SEP + labels[metricGroup]
+	}
+
+	return metricGroup + SEP + metricGroupKey
+}
+
+func NewDataPoints(mf *dto.MetricFamily) []*DataPoint {
+	var ret []*DataPoint
+
+	// Only process metrics of type GAUGE
+	if mf.GetType() != dto.MetricType_GAUGE {
+		return ret
+	}
+
+	for _, m := range mf.Metric {
+
+		dp := &DataPoint{
+			Name:   mf.GetName(),
+			Help:   mf.GetHelp(),
+			Labels: makeLabels(m),
+		}
+		ret = append(ret, dp)
+
 	}
 	return ret
 }
@@ -64,8 +132,19 @@ func (dp *DataPoint) ToEvent() *libhoney.Event {
 	return ev
 }
 
+func (mg *MetricGroup) ToEvent() *libhoney.Event {
+	ev := libhoney.NewEvent()
+	for _, dp := range mg.DataPoints {
+		ev.AddField(dp.Name, dp.Value)
+		ev.Add(dp.Labels)
+	}
+	ev.AddField("metric_group", mg.MetricGroup)
+	return ev
+}
+
 type Sender interface {
 	Send([]*DataPoint)
+	SendMetricGroup(*MetricGroup)
 }
 
 // TODO: handle transmission errors
@@ -76,6 +155,11 @@ func (ls *LibhoneySender) Send(dataPoints []*DataPoint) {
 		ev := dp.ToEvent()
 		ev.Send()
 	}
+}
+
+func (ls *LibhoneySender) SendMetricGroup(mg *MetricGroup) {
+	ev := mg.ToEvent()
+	ev.Send()
 }
 
 func (ls *LibhoneySender) ReadResponses() {
@@ -145,11 +229,24 @@ func run(options *Options, sender Sender) {
 		if err != nil {
 			fmt.Println("Error scraping metrics:", err)
 		}
-		for _, mf := range metricFamilies {
-			dataPoints := NewDataPoints(mf)
-			logrus.WithField("datapoints", len(dataPoints)).Info("Sending data")
-			sender.Send(dataPoints)
+
+		metricGroups := NewMetricGroups(metricFamilies)
+		for _, mg := range metricGroups {
+			if mg == nil {
+				continue
+			}
+			sender.SendMetricGroup(mg)
 		}
+
+		// for _, mf := range metricFamilies {
+		// 	dataPoints := NewDataPoints(mf)
+		// 	//logrus.WithField("datapoints", len(dataPoints)).Info("Sending data")
+		// 	// if len(dataPoints) > 0 {
+		// 	// 	b, _ := json.Marshal(dataPoints[0])
+		// 	// 	fmt.Println(string(b))
+		// 	// }
+		// 	sender.Send(dataPoints)
+		// }
 
 	}
 }
