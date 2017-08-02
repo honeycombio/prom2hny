@@ -1,11 +1,13 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"mime"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -47,7 +49,14 @@ func NewMetricGroups(mfs []*dto.MetricFamily) []*MetricGroup {
 			continue
 		}
 
-		metricGroupName := getMetricGroupName(mf)
+		metricGroupName, err := getMetricGroupName(mf)
+		if err != nil {
+			logrus.WithFields(logrus.Fields{
+				"error": err,
+			})
+			continue
+		}
+
 		for _, m := range mf.Metric {
 			groupedKey := getGroupedKey(metricGroupName, m)
 			metricGroup, ok := metricGroupsMap[groupedKey]
@@ -80,8 +89,15 @@ func NewMetricGroups(mfs []*dto.MetricFamily) []*MetricGroup {
 }
 
 // Returns Metric Group based on metric name. kube-state-metrics metric names are formatted kube_<group-name>_*
-func getMetricGroupName(mf *dto.MetricFamily) string {
-	return strings.Split(mf.GetName(), "_")[1]
+func getMetricGroupName(mf *dto.MetricFamily) (string, error) {
+	metricName := mf.GetName()
+
+	match, _ := regexp.MatchString("kube_[^_]*_*", metricName)
+	if !match {
+		return "", errors.New("unable to extract group name from Metric Name")
+	}
+
+	return strings.Split(metricName, "_")[1], nil
 }
 
 // Create Key for Grouping Events based on https://github.com/kubernetes/kube-state-metrics/tree/master/Documentation
