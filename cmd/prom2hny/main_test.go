@@ -16,6 +16,20 @@ func readMetrics() *bytes.Reader {
 	return bytes.NewReader(dat)
 }
 
+func readResultsToJSON() []string {
+	file, _ := os.Open("./fixtures/result.txt")
+	defer file.Close()
+
+	var resultJSON []string
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		resultJSON = append(resultJSON, scanner.Text())
+
+	}
+
+	return resultJSON
+}
+
 func generateResultFixture() {
 	data := readMetrics()
 	metricFamilies, _ := ParseResponse("text/plain", data)
@@ -36,35 +50,28 @@ func generateResultFixture() {
 
 }
 
+// Compares generated events from fixtures/metrics.txt with expected result in fixtures/result.txt
 func TestEndToEnd(t *testing.T) {
 	data := readMetrics()
 	metricFamilies, _ := ParseResponse("text/plain", data)
 	metricGroups := NewMetricGroups(metricFamilies)
 
-	file, _ := os.Open("./fixtures/result.txt")
-	defer file.Close()
+	resultJSON := readResultsToJSON()
 
-	var resultJSON []string
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		resultJSON = append(resultJSON, scanner.Text())
-
-	}
-	sort.Strings(resultJSON)
-
+	// Create JSON from generated Honeycomb Events
 	var rawJSON []string
 	for _, mg := range metricGroups {
 		ev := mg.ToEvent()
 		evJSON, _ := json.Marshal(ev)
 		rawJSON = append(rawJSON, string(evJSON))
 	}
+
+	// Compare result with raw by sorting and compare the "data" field
+	sort.Strings(resultJSON)
 	sort.Strings(rawJSON)
 
 	var curRaw map[string]string
 	var curResult map[string]string
-
-	t.Log(len(resultJSON))
-	t.Log(len(rawJSON))
 
 	for i, raw := range rawJSON {
 		json.Unmarshal([]byte(raw), &curRaw)
