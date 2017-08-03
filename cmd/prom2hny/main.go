@@ -88,12 +88,19 @@ func NewMetricGroups(mfs []*dto.MetricFamily) []*MetricGroup {
 	return metricGroups
 }
 
+func validateMetricName(metricName string) bool {
+	match, _ := regexp.MatchString("^kube_[^_]+_*", metricName)
+	if !match {
+		return false
+	}
+	return true
+}
+
 // Returns Metric Group based on metric name. kube-state-metrics metric names are formatted kube_<group-name>_*
 func getMetricGroupName(mf *dto.MetricFamily) (string, error) {
 	metricName := mf.GetName()
 
-	match, _ := regexp.MatchString("kube_[^_]*_*", metricName)
-	if !match {
+	if isValid := validateMetricName(metricName); !isValid {
 		return "", errors.New("unable to extract group name from Metric Name")
 	}
 
