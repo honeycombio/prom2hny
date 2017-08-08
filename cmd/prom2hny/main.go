@@ -35,8 +35,7 @@ type MetricGroup struct {
 
 type DataPoint struct {
 	Name   string
-	Value  float64
-	Help   string
+	Value  interface{}
 	Labels map[string]string
 }
 
@@ -66,11 +65,9 @@ func NewMetricGroups(mfs []*dto.MetricFamily) []*MetricGroup {
 				}
 			}
 
-			dp := &DataPoint{
-				Name:   mf.GetName(),
-				Help:   mf.GetHelp(),
-				Value:  m.GetGauge().GetValue(),
-				Labels: makeLabels(m),
+			dp := getDatapointFromMetric(mf, m)
+			if dp == nil {
+				continue
 			}
 
 			metricGroup.DataPoints = append(metricGroup.DataPoints, dp)
@@ -86,6 +83,43 @@ func NewMetricGroups(mfs []*dto.MetricFamily) []*MetricGroup {
 	}
 
 	return metricGroups
+}
+
+// We can't use m.GetGauge().GetValue() because there exist some
+// exceptional cases we need to handle. Abstract exception cases
+// in this func
+func getDatapointFromMetric(mf *dto.MetricFamily, m *dto.Metric) *DataPoint {
+	metricLabels := makeLabels(m)
+	metricName := mf.GetName()
+	var metricValue interface{}
+
+	switch metricName {
+	case "kube_pod_status_phase":
+		metricValue = metricLabels["phase"]
+		delete(metricLabels, "phase")
+
+	// Only contribute labels
+	case "kube_pod_labels", "kube_pod_info", "kube_service_info", "kube_pod_container_info", "kube_node_labels", "kube_service_labels":
+		metricValue = nil
+
+	// Formatted as Condition Values
+	case "kube_pod_status_ready", "kube_pod_status_scheduled", "kube_node_status_disk_pressure", "kube_node_status_memory_pressure", "kube_node_status_out_of_disk", "kube_node_status_ready":
+		if m.GetGauge().GetValue() == 1 {
+			metricValue = metricLabels["condition"]
+			delete(metricLabels, "condition")
+		} else {
+			return nil
+		}
+
+	default:
+		metricValue = m.GetGauge().GetValue()
+	}
+
+	return &DataPoint{
+		Name:   metricName,
+		Value:  metricValue,
+		Labels: metricLabels,
+	}
 }
 
 func validateMetricName(metricName string) bool {
@@ -104,7 +138,13 @@ func getMetricGroupName(mf *dto.MetricFamily) (string, error) {
 		return "", errors.New("unable to extract group name from Metric Name")
 	}
 
-	return strings.Split(metricName, "_")[1], nil
+	metricNameSplit := strings.Split(metricName, "_")
+
+	if metricNameSplit[1] == "pod" && metricNameSplit[2] == "container" {
+		return "pod-container", nil
+	}
+
+	return metricNameSplit[1], nil
 }
 
 // Create Key for Grouping Events based on https://github.com/kubernetes/kube-state-metrics/tree/master/Documentation
@@ -116,6 +156,8 @@ func getGroupedKey(metricGroup string, m *dto.Metric) string {
 	switch metricGroup {
 	case "node":
 		metricGroupKey = labels["node"]
+	case "pod-container":
+		metricGroupKey = labels["namespace"] + SEP + labels["pod"] + SEP + labels["container"]
 	default:
 		metricGroupKey = labels["namespace"] + SEP + labels[metricGroup]
 	}
@@ -134,7 +176,10 @@ func makeLabels(m *dto.Metric) map[string]string {
 func (mg *MetricGroup) ToEvent() *libhoney.Event {
 	ev := libhoney.NewEvent()
 	for _, dp := range mg.DataPoints {
-		ev.AddField(dp.Name, dp.Value)
+		// Some datapoints only contribute labels
+		if dp.Value != nil {
+			ev.AddField(dp.Name, dp.Value)
+		}
 		ev.Add(dp.Labels)
 	}
 	ev.AddField("metric_group", mg.MetricGroup)
