@@ -99,7 +99,7 @@ func getDatapointFromMetric(mf *dto.MetricFamily, m *dto.Metric) *DataPoint {
 		delete(metricLabels, "phase")
 
 	// Only contribute labels
-	case "kube_pod_labels", "kube_pod_info", "kube_service_info", "kube_pod_container_info", "kube_node_labels":
+	case "kube_pod_labels", "kube_pod_info", "kube_service_info", "kube_pod_container_info", "kube_node_labels", "kube_service_labels":
 		metricValue = nil
 
 	// Formatted as Condition Values
