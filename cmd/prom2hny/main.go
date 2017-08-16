@@ -25,6 +25,7 @@ type Options struct {
 	URL      string `long:"url"`
 	Dataset  string `long:"dataset"`
 	Writekey string `long:"writekey"`
+	APIHost  string `long:"apihost" default:"https://api.honeycomb.io"`
 	Interval int    `long:"interval" default:"60"`
 }
 
@@ -294,6 +295,7 @@ func main() {
 	libhoney.Init(libhoney.Config{
 		WriteKey: options.Writekey,
 		Dataset:  options.Dataset,
+		APIHost:  options.APIHost,
 	})
 
 	sender := &LibhoneySender{}
