@@ -195,6 +195,7 @@ type Sender interface {
 type LibhoneySender struct{}
 
 func (ls *LibhoneySender) Send(metricGroups []*MetricGroup) {
+	logrus.WithField("count", len(metricGroups)).Info("Publishing metrics")
 	for _, mg := range metricGroups {
 		ev := mg.ToEvent()
 		ev.Send()
