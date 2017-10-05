@@ -12,6 +12,10 @@
 			"Rev": "3d4380f53a34dcdc95f0c1db702615992b38d9a4"
 		},
 		{
+			"ImportPath": "github.com/davecgh/go-spew/spew",
+			"Rev": "5215b55f46b2b919f50a1df0eaa5886afe4e3b3d"
+		},
+		{
 			"ImportPath": "github.com/facebookgo/clock",
 			"Rev": "600d898af40aa09a7a93ecb9265d87b0504b6f03"
 		},
@@ -43,6 +47,10 @@
 			"Rev": "c12348ce28de40eed0136aa2b644d0ee0650e56c"
 		},
 		{
+			"ImportPath": "github.com/pmezard/go-difflib/difflib",
+			"Rev": "d8ed2627bdf02c080bf22230dbb337003b7aba2d"
+		},
+		{
 			"ImportPath": "github.com/prometheus/client_model/go",
 			"Comment": "model-0.0.2-14-g6f38060",
 			"Rev": "6f3806018612930941127f2a7c6c453ba2c527d2"
@@ -58,6 +66,11 @@
 		{
 			"ImportPath": "github.com/prometheus/common/model",
 			"Rev": "3e6a7635bac6573d43f49f97b47eb9bda195dba8"
+		},
+		{
+			"ImportPath": "github.com/stretchr/testify/assert",
+			"Comment": "v1.0-88-ge3a8ff8",
+			"Rev": "e3a8ff8ce36581f87a15341206f205b1da467059"
 		},
 		{
 			"ImportPath": "golang.org/x/sys/unix",

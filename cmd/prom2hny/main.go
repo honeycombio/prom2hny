@@ -96,8 +96,12 @@ func getDatapointFromMetric(mf *dto.MetricFamily, m *dto.Metric) *DataPoint {
 
 	switch metricName {
 	case "kube_pod_status_phase":
-		metricValue = metricLabels["phase"]
-		delete(metricLabels, "phase")
+		if m.GetGauge().GetValue() == 1 {
+			metricValue = metricLabels["phase"]
+			delete(metricLabels, "phase")
+		} else {
+			return nil
+		}
 
 	// Only contribute labels
 	case "kube_pod_labels", "kube_pod_info", "kube_service_info", "kube_pod_container_info", "kube_persistentvolumeclaim_info", "kube_cronjob_info", "kube_node_labels", "kube_service_labels", "kube_statefulset_labels":

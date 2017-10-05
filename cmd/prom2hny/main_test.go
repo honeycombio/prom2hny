@@ -9,6 +9,8 @@ import (
 	"os"
 	"sort"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func readMetrics(suffix string) *bytes.Reader {
@@ -71,23 +73,18 @@ func TestEndToEnd(t *testing.T) {
 		sort.Strings(resultJSON)
 		sort.Strings(rawJSON)
 
-		var curRaw map[string]string
-		var curResult map[string]string
+		var curRaw map[string]interface{}
+		var curResult map[string]interface{}
 
 		for i, raw := range rawJSON {
 			json.Unmarshal([]byte(raw), &curRaw)
 			json.Unmarshal([]byte(resultJSON[i]), &curResult)
-
-			if curRaw["data"] != curResult["data"] {
-				t.Error(raw)
-				t.Error(resultJSON[i])
-				t.Fatal("Did not receive expected result")
-			}
+			assert.Equal(t, curRaw["data"], curResult["data"])
 		}
 	}
 }
 
-func TestMetricNameValidaton(t *testing.T) {
+func TestMetricNameValidation(t *testing.T) {
 	for _, suffix := range []string{"0.5", "1.0"} {
 		data := readMetrics(suffix)
 		metricFamilies, _ := ParseResponse("text/plain", data)
