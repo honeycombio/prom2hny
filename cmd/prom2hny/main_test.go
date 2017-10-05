@@ -11,13 +11,13 @@ import (
 	"testing"
 )
 
-func readMetrics() *bytes.Reader {
-	dat, _ := ioutil.ReadFile("./fixtures/metrics.txt")
+func readMetrics(suffix string) *bytes.Reader {
+	dat, _ := ioutil.ReadFile(fmt.Sprintf("./fixtures/metrics_%s.txt", suffix))
 	return bytes.NewReader(dat)
 }
 
-func readResultsToJSON() []string {
-	file, _ := os.Open("./fixtures/result.txt")
+func readResultsToJSON(suffix string) []string {
+	file, _ := os.Open(fmt.Sprintf("./fixtures/result_%s.txt", suffix))
 	defer file.Close()
 
 	var resultJSON []string
@@ -30,8 +30,8 @@ func readResultsToJSON() []string {
 	return resultJSON
 }
 
-func generateResultFixture() {
-	data := readMetrics()
+func generateResultFixture(suffix string) {
+	data := readMetrics(suffix)
 	metricFamilies, _ := ParseResponse("text/plain", data)
 	metricGroups := NewMetricGroups(metricFamilies)
 
@@ -52,46 +52,50 @@ func generateResultFixture() {
 
 // Compares generated events from fixtures/metrics.txt with expected result in fixtures/result.txt
 func TestEndToEnd(t *testing.T) {
-	data := readMetrics()
-	metricFamilies, _ := ParseResponse("text/plain", data)
-	metricGroups := NewMetricGroups(metricFamilies)
+	for _, suffix := range []string{"0.5", "1.0"} {
+		data := readMetrics(suffix)
+		metricFamilies, _ := ParseResponse("text/plain", data)
+		metricGroups := NewMetricGroups(metricFamilies)
 
-	resultJSON := readResultsToJSON()
+		resultJSON := readResultsToJSON(suffix)
 
-	// Create JSON from generated Honeycomb Events
-	var rawJSON []string
-	for _, mg := range metricGroups {
-		ev := mg.ToEvent()
-		evJSON, _ := json.Marshal(ev)
-		rawJSON = append(rawJSON, string(evJSON))
-	}
+		// Create JSON from generated Honeycomb Events
+		var rawJSON []string
+		for _, mg := range metricGroups {
+			ev := mg.ToEvent()
+			evJSON, _ := json.Marshal(ev)
+			rawJSON = append(rawJSON, string(evJSON))
+		}
 
-	// Compare result with raw by sorting and compare the "data" field
-	sort.Strings(resultJSON)
-	sort.Strings(rawJSON)
+		// Compare result with raw by sorting and compare the "data" field
+		sort.Strings(resultJSON)
+		sort.Strings(rawJSON)
 
-	var curRaw map[string]string
-	var curResult map[string]string
+		var curRaw map[string]string
+		var curResult map[string]string
 
-	for i, raw := range rawJSON {
-		json.Unmarshal([]byte(raw), &curRaw)
-		json.Unmarshal([]byte(resultJSON[i]), &curResult)
+		for i, raw := range rawJSON {
+			json.Unmarshal([]byte(raw), &curRaw)
+			json.Unmarshal([]byte(resultJSON[i]), &curResult)
 
-		if curRaw["data"] != curResult["data"] {
-			t.Error(raw)
-			t.Error(resultJSON[i])
-			t.Fatal("Did not receive expected result")
+			if curRaw["data"] != curResult["data"] {
+				t.Error(raw)
+				t.Error(resultJSON[i])
+				t.Fatal("Did not receive expected result")
+			}
 		}
 	}
 }
 
 func TestMetricNameValidaton(t *testing.T) {
-	data := readMetrics()
-	metricFamilies, _ := ParseResponse("text/plain", data)
-	for _, mf := range metricFamilies {
-		name := mf.GetName()
-		if isValid := validateMetricName(name); !isValid {
-			t.Errorf("%s should be a valid metric name", name)
+	for _, suffix := range []string{"0.5", "1.0"} {
+		data := readMetrics(suffix)
+		metricFamilies, _ := ParseResponse("text/plain", data)
+		for _, mf := range metricFamilies {
+			name := mf.GetName()
+			if isValid := validateMetricName(name); !isValid {
+				t.Errorf("%s should be a valid metric name", name)
+			}
 		}
 	}
 

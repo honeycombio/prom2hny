@@ -100,10 +100,10 @@ func getDatapointFromMetric(mf *dto.MetricFamily, m *dto.Metric) *DataPoint {
 		delete(metricLabels, "phase")
 
 	// Only contribute labels
-	case "kube_pod_labels", "kube_pod_info", "kube_service_info", "kube_pod_container_info", "kube_node_labels", "kube_service_labels":
+	case "kube_pod_labels", "kube_pod_info", "kube_service_info", "kube_pod_container_info", "kube_persistentvolumeclaim_info", "kube_cronjob_info", "kube_node_labels", "kube_service_labels", "kube_statefulset_labels":
 		metricValue = nil
 
-	// Formatted as Condition Values
+	// Formatted as Condition Values (kube-state-metrics v0.5 and prior)
 	case "kube_pod_status_ready", "kube_pod_status_scheduled", "kube_node_status_disk_pressure", "kube_node_status_memory_pressure", "kube_node_status_out_of_disk", "kube_node_status_ready":
 		if m.GetGauge().GetValue() == 1 {
 			metricValue = metricLabels["condition"]
@@ -111,7 +111,20 @@ func getDatapointFromMetric(mf *dto.MetricFamily, m *dto.Metric) *DataPoint {
 		} else {
 			return nil
 		}
+	// kube-state-metrics v1.0 and up
+	case "kube_node_status_condition":
+		if m.GetGauge().GetValue() == 1 {
+			metricName = fmt.Sprintf("kube_node_status_%s", metricLabels["condition"])
+			metricValue = metricLabels["status"]
+		} else {
+			return nil
+		}
+	case "kube_persistentvolumeclaim_status_phase":
+		if m.GetGauge().GetValue() == 1 {
+			metricValue = metricLabels["phase"]
+			delete(metricLabels, "phase")
 
+		}
 	default:
 		metricValue = m.GetGauge().GetValue()
 	}
