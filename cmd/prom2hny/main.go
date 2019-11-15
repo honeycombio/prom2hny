@@ -141,7 +141,7 @@ func getDatapointFromMetric(mf *dto.MetricFamily, m *dto.Metric) *DataPoint {
 }
 
 func validateMetricName(metricName string) bool {
-	match, _ := regexp.MatchString("^kube_[^_]+_*", metricName)
+	match, _ := regexp.MatchString("^(kube|agones)_[^_]+_*", metricName)
 	if !match {
 		return false
 	}
@@ -158,8 +158,16 @@ func getMetricGroupName(mf *dto.MetricFamily) (string, error) {
 
 	metricNameSplit := strings.Split(metricName, "_")
 
-	if metricNameSplit[1] == "pod" && metricNameSplit[2] == "container" {
-		return "pod-container", nil
+	// Generate a meaningful metricGroupName
+	switch metricNameSplit[0] {
+	case "kube":
+		if metricNameSplit[1] == "pod" && metricNameSplit[2] == "container" {
+			return "pod-container", nil
+		}
+	case "agones":
+		if metricNameSplit[1] == "fleet" && metricNameSplit[2] == "autoscalers" {
+			return "fleet-autoscalers", nil
+		}
 	}
 
 	return metricNameSplit[1], nil
