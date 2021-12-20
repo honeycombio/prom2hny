@@ -1,8 +1,8 @@
 # prom2hny
 
-[![OSS Lifecycle](https://img.shields.io/osslifecycle/honeycombio/prom2hny?color=pink)](https://github.com/honeycombio/home/blob/main/honeycomb-oss-lifecycle-and-practices.md)
+[![OSS Lifecycle](https://img.shields.io/osslifecycle/honeycombio/prom2hny)](https://github.com/honeycombio/home/blob/main/honeycomb-oss-lifecycle-and-practices.md)
 
-**STATUS: this project is being sunset.** See https://github.com/honeycombio/prom2hny/issues/5
+**STATUS: this project has been archived.** See https://github.com/honeycombio/home/blob/main/honeycomb-oss-lifecycle-and-practices.md
 
 Scrapes Prometheus clients and sends their metrics to Honeycomb. The current
 primary use case is to send kube-state-metrics data to Honeycomb.
